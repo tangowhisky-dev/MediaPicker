@@ -24,7 +24,7 @@ struct CustomCameraView<CameraViewContent: View>: View {
             LiveCameraView(
                 session: cameraViewModel.captureSession,
                 videoGravity: .resizeAspectFill,
-                orientation: .portrait
+                orientation: UIDevice.current.orientation // Use actual device orientation
             ),
             { // cancel
                 if cameraSelectionService.hasSelected {
@@ -83,7 +83,7 @@ struct StandardConrolsCameraView: View {
             LiveCameraView(
                 session: cameraViewModel.captureSession,
                 videoGravity: .resizeAspectFill,
-                orientation: .portrait
+                orientation: UIDevice.current.orientation // Use actual device orientation
             )
             .overlay {
                 if cameraViewModel.snapOverlay {

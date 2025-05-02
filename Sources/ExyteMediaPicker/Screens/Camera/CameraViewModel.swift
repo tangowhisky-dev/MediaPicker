@@ -17,6 +17,30 @@ extension AVCaptureSession: @retroactive @unchecked Sendable { }
 extension AVCaptureSession: @unchecked Sendable { }
 #endif
 
+extension UIDeviceOrientation {
+    var videoOrientation: AVCaptureVideoOrientation? {
+        switch self {
+        case .portrait: return .portrait
+        case .portraitUpsideDown: return .portraitUpsideDown
+        case .landscapeLeft: return .landscapeRight // Device left = camera right
+        case .landscapeRight: return .landscapeLeft // Device right = camera left
+        default: return nil
+        }
+    }
+}
+
+extension UIInterfaceOrientation {
+    var videoOrientation: AVCaptureVideoOrientation? {
+        switch self {
+        case .portrait: return .portrait
+        case .portraitUpsideDown: return .portraitUpsideDown
+        case .landscapeLeft: return .landscapeLeft
+        case .landscapeRight: return .landscapeRight
+        default: return nil
+        }
+    }
+}
+
 final actor CameraViewModel: NSObject, ObservableObject {
 
     struct CaptureDevice {
@@ -38,6 +62,7 @@ final actor CameraViewModel: NSObject, ObservableObject {
     private let motionManager = MotionManager()
     private var captureDevice: CaptureDevice?
     private var lastPhotoActualOrientation: UIDeviceOrientation?
+    private var orientationObserver: Any?
 
     private let minScale: CGFloat = 1
     private let singleCameraMaxScale: CGFloat = 5
@@ -51,6 +76,25 @@ final actor CameraViewModel: NSObject, ObservableObject {
             await configureSession()
             captureSession.startRunning()
         }
+
+        // Start observing device orientation changes
+        orientationObserver = NotificationCenter.default.addObserver(
+            forName: UIDevice.orientationDidChangeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.updateCameraForNewOrientation()
+        }
+
+        // Begin generating orientation notifications
+        UIDevice.current.beginGeneratingDeviceOrientationNotifications()
+    }
+
+    deinit {
+        if let observer = orientationObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+        UIDevice.current.endGeneratingDeviceOrientationNotifications()
     }
 
     func startSession() {
@@ -68,26 +112,64 @@ final actor CameraViewModel: NSObject, ObservableObject {
     }
 
     func takePhoto() async {
-        let settings = AVCapturePhotoSettings()
-        settings.flashMode = await flashEnabled ? .on : .off
-        photoOutput.capturePhoto(with: settings, delegate: self)
-        lastPhotoActualOrientation = motionManager.orientation
-
-        withAnimation(.linear(duration: 0.1)) {
-            DispatchQueue.main.async {
-                self.snapOverlay = true
+        // Show snapshot animation
+        showSnapshot()
+        
+        // Set correct orientation for photo capture
+        let photoSettings = AVCapturePhotoSettings()
+        
+        if let photoOutputConnection = photoOutput.connection(with: .video) {
+            // Get current device orientation
+            let currentOrientation = UIDevice.current.orientation
+            if let videoOrientation = currentOrientation.videoOrientation {
+                photoOutputConnection.videoOrientation = videoOrientation
+            } else {
+                photoOutputConnection.videoOrientation = .portrait // Fallback to portrait
             }
         }
-        withAnimation(.linear(duration: 0.1).delay(0.1)) {
-            DispatchQueue.main.async {
-                self.snapOverlay = false
-            }
+        
+        if await flashEnabled {
+            photoSettings.flashMode = .on
+        }
+        
+        photoOutput.capturePhoto(with: photoSettings, delegate: self)
+    }
+
+    private func showSnapshot() {
+        Task { @MainActor in
+            // Set overlay to true to show the animation
+            self.snapOverlay = true
+            
+            // Reset the overlay after a short delay
+            try? await Task.sleep(nanoseconds: 200_000_000) // 0.2 seconds
+            self.snapOverlay = false
         }
     }
 
     func startVideoCapture() async {
+        // Set flash if needed
         setVideoTorchMode(await flashEnabled ? .on : .off)
-
+        
+        // IMPROVEMENT: Add a tiny delay to ensure orientation updates have propagated
+        try? await Task.sleep(nanoseconds: 100_000_000) // 0.1 seconds
+        
+        // Set correct orientation before recording
+        if let connection = videoOutput.connection(with: .video) {
+            // Get current device orientation
+            let currentOrientation = UIDevice.current.orientation
+            if let videoOrientation = currentOrientation.videoOrientation {
+                connection.videoOrientation = videoOrientation
+            } else {
+                // Try getting orientation from window as backup
+                if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+                   let videoOrientation = windowScene.interfaceOrientation.videoOrientation {
+                    connection.videoOrientation = videoOrientation
+                } else {
+                    connection.videoOrientation = .portrait // Fallback to portrait
+                }
+            }
+        }
+        
         let videoUrl = FileManager.getTempUrl()
         videoOutput.startRecording(to: videoUrl, recordingDelegate: self)
     }
@@ -216,6 +298,17 @@ final actor CameraViewModel: NSObject, ObservableObject {
 
     private func updateOutputOrientation(_ output: AVCaptureOutput) {
         guard let connection = output.connection(with: .video) else { return }
+        
+        // Support orientation changes
+        if connection.isVideoOrientationSupported {
+            if let videoOrientation = UIDevice.current.orientation.videoOrientation {
+                connection.videoOrientation = videoOrientation
+            } else {
+                connection.videoOrientation = .portrait
+            }
+        }
+        
+        // Original rotation angle code
         if connection.isVideoRotationAngleSupported(0) {
             connection.videoRotationAngle = 0
         }
@@ -251,6 +344,27 @@ final actor CameraViewModel: NSObject, ObservableObject {
             position: .unspecified)
 
         return session.devices.first
+    }
+
+    private func updateCameraForNewOrientation() {
+        // Update preview layer orientation
+        DispatchQueue.main.async {
+            // Update video connection orientation for future recordings
+            if let connection = self.videoOutput.connection(with: .video),
+               let orientation = UIDevice.current.orientation.videoOrientation {
+                if connection.isVideoOrientationSupported {
+                    connection.videoOrientation = orientation
+                }
+            }
+            
+            // Also update photo orientation
+            if let connection = self.photoOutput.connection(with: .video),
+               let orientation = UIDevice.current.orientation.videoOrientation {
+                if connection.isVideoOrientationSupported {
+                    connection.videoOrientation = orientation
+                }
+            }
+        }
     }
 }
 
