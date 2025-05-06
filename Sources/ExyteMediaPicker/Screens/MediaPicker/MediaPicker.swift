@@ -218,6 +218,22 @@ public struct MediaPicker<AlbumSelectionContent: View, CameraSelectionContent: V
                 .confirmationDialog("", isPresented: $viewModel.showingExitCameraConfirmation, titleVisibility: .hidden) {
                     deleteAllButton
                 }
+//                if internalPickerMode == .camera {
+//                    // Only start camera when view appears, stop when it disappears
+//                    .onAppear {
+//                        Task {
+//                            // Start camera only when view appears
+//                            await $viewModel.startSession
+//                        }
+//                    }
+//                    .onDisappear {
+//                        Task {
+//                            // Stop camera when view disappears
+//                            await viewModel.stopSession()
+//                            await viewModel.releaseResources()
+//                        }
+//                    }
+//                }
             }
         }
         .onAppear {

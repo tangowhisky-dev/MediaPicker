@@ -72,12 +72,11 @@ final actor CameraViewModel: NSObject, ObservableObject {
 
     override init() {
         super.init()
-        Task {
-            await configureSession()
-            captureSession.startRunning()
-        }
-
-        // Start observing device orientation changes
+        // Set up the capture session
+        startSession()
+        // Set up the camera orientation observer
+        
+        // Keep orientation observer as it's lightweight
         orientationObserver = NotificationCenter.default.addObserver(
             forName: UIDevice.orientationDidChangeNotification,
             object: nil,
@@ -95,14 +94,46 @@ final actor CameraViewModel: NSObject, ObservableObject {
             NotificationCenter.default.removeObserver(observer)
         }
         UIDevice.current.endGeneratingDeviceOrientationNotifications()
+    stopSession()
     }
 
     func startSession() {
-        captureSession.startRunning()
+        guard !captureSession.isRunning else { return }
+        
+        Task {
+            print("📸 Starting camera session")
+            
+            // Only configure if needed
+            if captureSession.inputs.isEmpty {
+                await configureSession()
+            }
+            
+            // Start session on background thread to avoid UI freezing
+            Task.detached(priority: .userInitiated) {
+                self.captureSession.startRunning()
+            }
+        }
     }
 
     func stopSession() {
+        guard captureSession.isRunning else { return }
+        
+        print("📸 Stopping camera session")
         captureSession.stopRunning()
+    }
+
+    func releaseResources() async {
+        stopSession()
+        
+        // Release camera resources
+        if captureSession.isRunning {
+            captureSession.stopRunning()
+        }
+        
+        // Clear cached images on main actor
+        await MainActor.run {
+            self.capturedPhoto = nil
+        }
     }
 
     func setCapturedPhoto(_ photo: URL?) {
