@@ -3,6 +3,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 public struct MediaPicker<AlbumSelectionContent: View, CameraSelectionContent: View, CameraViewContent: View>: View {
 
@@ -218,22 +219,6 @@ public struct MediaPicker<AlbumSelectionContent: View, CameraSelectionContent: V
                 .confirmationDialog("", isPresented: $viewModel.showingExitCameraConfirmation, titleVisibility: .hidden) {
                     deleteAllButton
                 }
-//                if internalPickerMode == .camera {
-//                    // Only start camera when view appears, stop when it disappears
-//                    .onAppear {
-//                        Task {
-//                            // Start camera only when view appears
-//                            await $viewModel.startSession
-//                        }
-//                    }
-//                    .onDisappear {
-//                        Task {
-//                            // Stop camera when view disappears
-//                            await viewModel.stopSession()
-//                            await viewModel.releaseResources()
-//                        }
-//                    }
-//                }
             }
         }
         .onAppear {
@@ -322,8 +307,22 @@ public struct MediaPicker<AlbumSelectionContent: View, CameraSelectionContent: V
                 CustomCameraView<CameraViewContent>(viewModel: viewModel, didTakePicture: didTakePicture, didPressCancel: didPressCancel, cameraViewBuilder: cameraViewBuilder)
                     .ignoresSafeArea()
             } else {
-                StandardConrolsCameraView(viewModel: viewModel, didTakePicture: didTakePicture, didPressCancel: didPressCancel, selectionParamsHolder: selectionParamsHolder)
-                    .ignoresSafeArea()
+                // Use our new UIKit camera view instead of StandardControlsCameraView
+                UIKitCameraView(
+                    onPhotoCapture: { url in
+                        viewModel.pickedMediaUrl = url
+                        didTakePicture()
+                    },
+                    onVideoCapture: { url in
+                        viewModel.pickedMediaUrl = url
+                        didTakePicture()
+                    },
+                    onCancel: didPressCancel,
+                    onFlipCamera: {},
+                    onToggleFlash: {},
+                    flashEnabled: false
+                )
+                .ignoresSafeArea()
             }
         }
         .onAppear {
