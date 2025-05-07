@@ -1,3 +1,4 @@
+/*
 //
 //  SwiftUIView.swift
 //  
@@ -108,3 +109,4 @@ public extension MediaPicker where AlbumSelectionContent == EmptyView {
                   cameraViewBuilder: cameraViewBuilder)
     }
 }
+*/

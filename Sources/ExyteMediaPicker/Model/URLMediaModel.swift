@@ -1,81 +1,89 @@
-//
-//  SwiftUIView.swift
-//  
-//
-//  Created by Alisa Mylnikova on 12.07.2022.
-//
-
-import SwiftUI
-import UniformTypeIdentifiers
+import Foundation
 import AVFoundation
+import UIKit
 
-struct URLMediaModel {
-    let url: URL
-}
-
-extension URLMediaModel: MediaModelProtocol {
-
-    var mediaType: MediaType? {
-        if url.isImageFile {
-            return .image
+public class URLMediaModel: MediaModelProtocol, Identifiable, Equatable {
+    public var id: String
+    private let url: URL
+    public let mediaType: MediaType
+    public var duration: CGFloat?
+    
+    public init(url: URL, type: MediaType? = nil) {
+        self.id = UUID().uuidString
+        self.url = url
+        
+        // Determine media type if not provided
+        if let type = type {
+            self.mediaType = type
+        } else {
+            let fileExtension = url.pathExtension.lowercased()
+            if ["jpg", "jpeg", "png", "heic", "heif"].contains(fileExtension) {
+                self.mediaType = .image
+            } else if ["mov", "mp4", "m4v"].contains(fileExtension) {
+                self.mediaType = .video
+            } else {
+                self.mediaType = .document
+            }
         }
-        if url.isVideoFile {
-            return .video
-        }
-        return nil
-    }
-
-    var duration: CGFloat? {
-        get async {
-            let asset = AVURLAsset(url: url)
-            do {
-                let duration = try await asset.load(.duration)
-                return CGFloat(CMTimeGetSeconds(duration))
-            } catch {
-                return nil
+        
+        // Calculate duration for videos
+        if self.mediaType == .video {
+            let asset = AVAsset(url: url)
+            Task {
+                do {
+                    let duration = try await asset.load(.duration)
+                    self.duration = CGFloat(CMTimeGetSeconds(duration))
+                } catch {
+                    print("Error loading duration: \(error)")
+                }
             }
         }
     }
-
-    func getURL() async -> URL? {
-        url
+    
+    public func getURL() async -> URL? {
+        return url
     }
-
-    func getThumbnailURL() async -> URL? {
-        switch mediaType {
-        case .image:
+    
+    public func getThumbnailURL() async -> URL? {
+        if mediaType == .image {
             return url
-        case .video:
-            return await url.getThumbnailURL()
-        case .none:
-            return nil
+        } else if mediaType == .video {
+            if let thumbnailData = await generateVideoThumbnail() {
+                return FileManager.storeToTempDir(data: thumbnailData)
+            }
         }
+        return nil
     }
-
-    func getData() async throws -> Data? {
-        try? Data(contentsOf: url)
+    
+    public func getData() async throws -> Data? {
+        return try Data(contentsOf: url)
     }
-
-    func getThumbnailData() async -> Data? {
-        switch mediaType {
-        case .image:
+    
+    public func getThumbnailData() async -> Data? {
+        if mediaType == .image {
             return try? Data(contentsOf: url)
-        case .video:
-            return await url.getThumbnailData()
-        case .none:
+        } else if mediaType == .video {
+            return await generateVideoThumbnail()
+        }
+        return nil
+    }
+    
+    private func generateVideoThumbnail() async -> Data? {
+        let asset = AVAsset(url: url)
+        let imageGenerator = AVAssetImageGenerator(asset: asset)
+        imageGenerator.appliesPreferredTrackTransform = true
+        
+        do {
+            let cgImage = try imageGenerator.copyCGImage(at: .zero, actualTime: nil)
+            return UIImage(cgImage: cgImage).jpegData(compressionQuality: 0.7)
+        } catch {
+            print("Error generating thumbnail: \(error)")
             return nil
         }
     }
-}
-
-extension URLMediaModel: Identifiable {
-    var id: String {
-        url.absoluteString
+    
+    public static func == (lhs: URLMediaModel, rhs: URLMediaModel) -> Bool {
+        return lhs.id == rhs.id
     }
 }
 
-extension URLMediaModel: Equatable {
-    static func ==(lhs: URLMediaModel, rhs: URLMediaModel) -> Bool {
-        lhs.id == rhs.id
-    }
-}

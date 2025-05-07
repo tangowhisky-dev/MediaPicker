@@ -5,6 +5,8 @@
 import SwiftUI
 import AnchoredPopup
 
+// Comment out AlbumView as it's replaced by GalleryPicker in SimplifiedMediaPicker
+/*
 struct AlbumView: View {
 
     @EnvironmentObject private var selectionService: SelectionService
@@ -149,3 +151,4 @@ struct AlbumView: View {
         }
     }
 }
+*/

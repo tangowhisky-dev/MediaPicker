@@ -3,11 +3,11 @@
 //
 
 import Foundation
-
-import Foundation
 import Photos
 import SwiftUI
 
+// Comment out AllMediasProvider as GalleryPicker likely uses a simpler approach
+/*
 final class AllMediasProvider: BaseMediasProvider {
 
     override func reload() {
@@ -32,3 +32,4 @@ final class AllMediasProvider: BaseMediasProvider {
         filterAndPublish(assets: assets)
     }
 }
+*/

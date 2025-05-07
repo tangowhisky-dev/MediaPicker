@@ -25,6 +25,9 @@ public struct MediaPickerTheme: Sendable {
     }
 }
 
+// Keep core theme components needed by SimplifiedMediaPicker
+// Consider simplifying if the full theme system isn't needed
+
 extension MediaPickerTheme {
     public struct Main: Sendable {
         public let pickerText: Color

@@ -46,7 +46,18 @@ final class FullscreenCellViewModel: ObservableObject {
                 guard let url = url else { return }
                 setupPlayer(url)
                 videoSize = await getVideoSize(url)
-            case .none:
+            case .document:
+                let url = await mediaModel.getURL()
+                guard let url = url else { return }
+                //TODO: add file icon
+                let fileName = url.lastPathComponent
+                let fileExtension = url.pathExtension
+//                let fileIcon = FileIconProvider.shared.getIcon(for: fileExtension)
+//                DispatchQueue.main.async {
+//                    self.image = fileIcon
+//                }
+//                
+            
                 break
             }
         }

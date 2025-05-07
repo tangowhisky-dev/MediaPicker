@@ -13,22 +13,22 @@ final class MediaPickerViewModel: ObservableObject {
     @Published var pickedMediaUrl: URL?
 #endif
 
-    @Published private(set) var defaultAlbumsProvider = DefaultAlbumsProvider()
+//    @Published private(set) var defaultAlbumsProvider = DefaultAlbumsProvider()
     @Published private(set) var internalPickerMode: MediaPickerMode = .photos
 
-    var albums: [AlbumModel] {
-        defaultAlbumsProvider.albums
-    }
+//    var albums: [AlbumModel] {
+//        defaultAlbumsProvider.albums
+//    }
 
     var shouldUpdatePickerMode: (MediaPickerMode)->() = {_ in}
 
     func onStart() {
-        defaultAlbumsProvider.reload()
+//        defaultAlbumsProvider.reload()
     }
 
-    func getAlbumModel(_ album: Album) -> AlbumModel? {
-        albums.filter { $0.id == album.id }.first
-    }
+//    func getAlbumModel(_ album: Album) -> AlbumModel? {
+//        albums.filter { $0.id == album.id }.first
+//    }
 
     func setPickerMode(_ mode: MediaPickerMode) {
         internalPickerMode = mode

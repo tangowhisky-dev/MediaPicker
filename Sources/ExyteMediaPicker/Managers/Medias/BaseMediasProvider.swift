@@ -6,6 +6,8 @@ import Foundation
 import Photos
 import SwiftUI
 
+// Comment out BaseMediasProvider as GalleryPicker likely uses a simpler approach
+/*
 @MainActor
 class BaseMediasProvider: ObservableObject {
     var selectionParamsHolder: SelectionParamsHolder
@@ -103,9 +105,10 @@ class BaseMediasProvider: ObservableObject {
         stopPublishing()
     }
 }
+*/
 
 class MediasProvider {
-
+    // Keep core functionality like mapping assets
     static func map(fetchResult: PHFetchResult<PHAsset>, mediaSelectionType: MediaSelectionType) -> [AssetMediaModel] {
         var assetMediaModels: [AssetMediaModel] = []
 

@@ -24,6 +24,7 @@ let package = Package(
             dependencies: [
                 .product(name: "AnchoredPopup", package: "AnchoredPopup")
             ],
+            path: "Sources/ExyteMediaPicker",
             swiftSettings: [
                 .enableExperimentalFeature("StrictConcurrency")
             ]

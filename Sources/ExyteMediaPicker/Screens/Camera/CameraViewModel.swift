@@ -72,9 +72,6 @@ final actor CameraViewModel: NSObject, ObservableObject {
 
     override init() {
         super.init()
-        // Set up the capture session
-        startSession()
-        // Set up the camera orientation observer
         
         // Keep orientation observer as it's lightweight
         orientationObserver = NotificationCenter.default.addObserver(
@@ -137,8 +134,12 @@ final actor CameraViewModel: NSObject, ObservableObject {
     }
 
     func setCapturedPhoto(_ photo: URL?) {
+        let urlToUse = photo ?? URLMediaModelCache.shared.latestCapturedURL
+        
         DispatchQueue.main.async {
-            self.capturedPhoto = photo
+            self.capturedPhoto = urlToUse
+            // Clear the cache after use
+            URLMediaModelCache.shared.latestCapturedURL = nil
         }
     }
 
